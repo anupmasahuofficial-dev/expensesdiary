@@ -18,14 +18,50 @@ if "transactions" not in st.session_state:
         "Date", "Type", "Category", "Description", "Amount", "Payment Method"
     ])
 
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+
+if "user_address" not in st.session_state:
+    st.session_state.user_address = ""
+
 # ----------------------------
 # Function: Convert to Excel
 # ----------------------------
-def to_excel(df):
+def to_excel(df, name, address):
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Transactions')
+
+    try:
+        engine = "xlsxwriter"
+        writer = pd.ExcelWriter(output, engine=engine)
+    except:
+        engine = "openpyxl"
+        writer = pd.ExcelWriter(output, engine=engine)
+
+    with writer:
+        # Write user details
+        info_df = pd.DataFrame({
+            "Details": ["Name", "Address"],
+            "Value": [name, address]
+        })
+        info_df.to_excel(writer, index=False, sheet_name="User Info")
+
+        # Write transactions
+        df.to_excel(writer, index=False, sheet_name="Transactions")
+
     return output.getvalue()
+
+# ----------------------------
+# Sidebar - Personal Details
+# ----------------------------
+st.sidebar.header("👤 Personal Details")
+
+st.session_state.user_name = st.sidebar.text_input(
+    "Name", value=st.session_state.user_name
+)
+
+st.session_state.user_address = st.sidebar.text_area(
+    "Address", value=st.session_state.user_address
+)
 
 # ----------------------------
 # Sidebar - Add Transaction
@@ -118,7 +154,7 @@ filtered_df = df[
 ]
 
 # ----------------------------
-# Tables
+# Table
 # ----------------------------
 st.subheader("📋 Filtered Transactions")
 st.dataframe(filtered_df, use_container_width=True)
@@ -131,7 +167,7 @@ st.subheader("📤 Export Reports")
 col1, col2 = st.columns(2)
 
 with col1:
-    excel_full = to_excel(df)
+    excel_full = to_excel(df, st.session_state.user_name, st.session_state.user_address)
     st.download_button(
         label="⬇️ Download Full Report (Excel)",
         data=excel_full,
@@ -140,7 +176,7 @@ with col1:
     )
 
 with col2:
-    excel_filtered = to_excel(filtered_df)
+    excel_filtered = to_excel(filtered_df, st.session_state.user_name, st.session_state.user_address)
     st.download_button(
         label="⬇️ Download Filtered Report (Excel)",
         data=excel_filtered,
